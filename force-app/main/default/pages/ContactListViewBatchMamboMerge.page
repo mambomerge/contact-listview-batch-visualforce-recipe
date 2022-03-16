@@ -1,0 +1,100 @@
+<apex:page lightningStylesheets="true" standardController="Contact" recordSetVar="records" applyBodyTag="false">
+  <!--
+    @description Use this page for a List View Button on the Contacts Tab
+                  that will merge a document for each record in the list view
+  -->
+  <style>
+    .hide {
+      display:none;
+    }
+    .loader {
+      border: 16px solid #f3f3f3; /* Light grey */
+      border-top: 16px solid #3498db; /* Blue */
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      animation: spin 2s linear infinite;
+      margin: auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+  <apex:includeScript value="{! $Resource.Mambo__MamboMerge }" />
+  <apex:slds />
+  <apex:includeLightning />
+  <apex:form >
+    <apex:pageBlock title="Mambo Merge Batch Generation">
+      <apex:pageBlockButtons location="top">
+        <apex:commandButton action="{!cancel}" value="Back" />
+      </apex:pageBlockButtons>
+      <apex:pageBlockSection>
+        <apex:pageBlockSectionItem>
+          <apex:outputLabel value="Records Selected" />
+          <apex:outputText value="{!selected.size}" />
+        </apex:pageBlockSectionItem>
+        <apex:pageBlockSectionItem>
+          <apex:outputLabel value="Documents Generated" />
+          <apex:outputText value="0" id="documentsGenerated" />
+        </apex:pageBlockSectionItem>
+      </apex:pageBlockSection>
+    </apex:pageBlock>
+  </apex:form>
+
+  <apex:pageMessages />
+  <div id="loader" class="loader"></div>
+  <div id="lightning" style="display:none;" />
+
+  <script>
+    // TODO (REQUIRED): Please enter your template Id in the var below
+    const templateId = "ContactListViewBatch";
+
+    // TODO (REQUIRED): Please specify whether you are using checkboxes on your list view
+    const mergeOnlyCheckedRecordsInListView = true;
+
+    // TODO (OPTIONAL): Enable debug mode if things are working
+    const debugOn = true;
+
+    /*****  DO NOT CHANGE BELOW CODE *****/
+    const idsString = mergeOnlyCheckedRecordsInListView ? "{!selected}" : "{!records}";
+    let recordIds = idsString.substring(1, idsString.length - 1).split(', ');
+
+    function incrementGenerated() {
+      let documentsGenerated = document.querySelectorAll('[id$="documentsGenerated"]')[0];
+      let currentValue = documentsGenerated.innerText;
+      currentValue = parseInt(currentValue)+1;
+      documentsGenerated.innerText = currentValue;
+      if ( currentValue === recordIds.length ){
+        document.getElementById('loader').classList.add("hide");
+      }
+    }
+
+    if (recordIds.length > 0 && templateId) {
+      let documentsGenerated = document.querySelectorAll('[id$="documentsGenerated"]')[0];
+      $Lightning.use("c:mamboMergeApp", function () {
+        for ( let i=0; i<recordIds.length; i++ ){
+          $Lightning.createComponent(
+            "mambo:mamboMerge",
+            {
+              templateId: templateId,
+              debug: debugOn,
+              mergeOnLoad: true,
+              recordId: recordIds[i]
+            },
+            "lightning",
+            function (cmp, status, errorMessage) {
+              document.querySelectorAll('mambo-mambo-merge')[i].addEventListener('merge', (e) => {
+                if ( e.detail.isSuccess === "true" ){
+                  console.log("here",e.detail);
+                  incrementGenerated();
+                }
+              });
+            }
+          );
+        }
+      });
+    }
+  </script>
+</apex:page>
